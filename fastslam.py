@@ -262,29 +262,37 @@ class Particle(object):
             # If the landmark is observed for the first time:
             if not landmark.observed:
                 # TODO: Initialize its position based on the measurement and the current Particle pose:
-
+                landmark.mu[0] = robot_pose[0] + measurement.z_range * cos(robot_pose[2][0] + measurement.z_bearing)
+                landmark.mu[1] = robot_pose[1] + measurement.z_range * sin(robot_pose[2][0] + measurement.z_bearing)
                 # get the Jacobian
                 [h, H] = self.measurement_model(landmark)
-
                 # TODO: initialize the EKF for this landmark
+                landmark.sigma = np.linalg.inv(np.dot(np.transpose(H), np.dot(np.linalg.inv(Q_t), H)))
 
                 # Indicate that this landmark has been observed
                 landmark.observed = True
-
             else:
                 # get the expected measurement and the Jacobian
                 [expected_z, H] = self.measurement_model(landmark)
 
                 # TODO: compute the measurement covariance
+                Q_cov = np.add(np.dot(H, np.dot(landmark.sigma, np.transpose(H))), Q_t)
 
                 # TODO: calculate the Kalman gain
+                K_gain = np.dot(landmark.sigma, np.dot(np.transpose(H), np.linalg.inv(Q_cov)))
 
                 # TODO: compute the error between the z and expected_z (remember to normalize the angle)
+                error_m = np.arange(2).reshape(2,1)
+                error_m[0] = measurement.z_range - expected_z[0]
+                error_m[1] = normalize_angle(measurement.z_bearing) - expected_z[1]
 
                 # TODO: update the mean and covariance of the EKF for this landmark
+                landmark.mu = np.add(landmark.mu, np.dot(K_gain, error_m))
+                landmark.sigma = np.dot(np.add(np.identity(len(K_gain)), -np.dot(K_gain, H)), landmark.sigma)
 
                 # TODO: compute the likelihood of this observation, multiply with the former weight
                 # to account for observing several features in one time step
+                self.weight = (1.0/sqrt(np.linalg.det(2 * pi * Q_cov))) * exp(-0.5 * float((np.dot(np.dot(np.transpose(error_m), np.linalg.inv(Q_cov)), error_m))))
 
 
     def measurement_model(self, landmark_ekf):
@@ -499,6 +507,7 @@ class Plotter(object):
         sxx = float(C[0, 0])
         syy = float(C[1, 1])
         sxy = float(C[0, 1])
+
         a = sqrt(0.5 * (sxx + syy + sqrt((sxx - syy) ** 2 + 4. * sxy ** 2)))  # always greater
         b = sqrt(0.5 * (sxx + syy - sqrt((sxx - syy) ** 2 + 4. * sxy ** 2)))  # always smaller
 
