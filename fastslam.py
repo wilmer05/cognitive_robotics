@@ -262,8 +262,9 @@ class Particle(object):
             # If the landmark is observed for the first time:
             if not landmark.observed:
                 # TODO: Initialize its position based on the measurement and the current Particle pose:
-                landmark.mu[0] = robot_pose[0] + measurement.z_range * cos(robot_pose[2][0] + measurement.z_bearing)
-                landmark.mu[1] = robot_pose[1] + measurement.z_range * sin(robot_pose[2][0] + measurement.z_bearing)
+                mux = robot_pose[0] + measurement.z_range * cos(robot_pose[2][0] + measurement.z_bearing)
+                muy = robot_pose[1] + measurement.z_range * sin(robot_pose[2][0] + measurement.z_bearing)
+                landmark.mu = np.vstack([mux, muy])
                 # get the Jacobian
                 [h, H] = self.measurement_model(landmark)
                 # TODO: initialize the EKF for this landmark
